@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  db2:
+    image: ibmcom/db2
+    container_name: contenedor-db2
+    ports:
+      - "50000:50000"
+    environment:
+      DB2INST1_PASSWORD: db2pass
+      LICENSE: accept
+      DBNAME: VOTACION
+    privileged: true
+    volumes:
+      - ./data/db2:/database
+    restart: always
+
+  backend:
+    build:
+      context: ./backend-elecciones
+      dockerfile: Dockerfile
+    container_name: contenedor-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - DB_HOST=db2
+      - DB_USER=db2inst1
+      - DB_PASSWORD=db2pass
+      - DB_NAME=VOTACION
+    depends_on:
+      - db2
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend-elecciones  
+      dockerfile: Dockerfile
+    container_name: contenedor-frontend
+    ports:
+      - "3000:80"   # nginx
+      # - "3000:3000" # npm start
+    depends_on:
+      - backend
+    restart: always
+
