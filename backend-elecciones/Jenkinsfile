@@ -1,0 +1,42 @@
+pipeline {
+  agent any
+
+  environment {
+    DOCKER_HUB_CREDENTIALS = credentials('dockerhub-creds')
+    DOCKERHUB_USER = 'your-dockerhub-user'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        git 'https://github.com/jimagrini/DevOps-Sistema-electoral.git'
+      }
+    }
+    stage('Build Docker Images') {
+      steps {
+        dir('backend-elecciones') {
+          sh "docker build -t $DOCKERHUB_USER/backend:latest ."
+        }
+        dir('frontend-elecciones') {
+          sh "docker build -t $DOCKERHUB_USER/frontend:latest ."
+        }
+      }
+    }
+    stage('Push Images') {
+      steps {
+        sh "echo $DOCKER_HUB_CREDENTIALS_PSW | docker login -u $DOCKER_HUB_CREDENTIALS_USR --password-stdin"
+        sh "docker push $DOCKERHUB_USER/backend:latest"
+        sh "docker push $DOCKERHUB_USER/frontend:latest"
+      }
+    }
+    stage('Apply Kubernetes Manifests') {
+      steps {
+        // Asumiendo que Kubernetes (Minikube) ya está configurado en el agente Jenkins
+        sh 'kubectl apply -f k8s/db2-secret.yaml'
+        sh 'kubectl apply -f k8s/db2-deployment.yaml'
+        sh 'kubectl apply -f k8s/backend-deployment.yaml'
+        sh 'kubectl apply -f k8s/frontend-deployment.yaml'
+      }
+    }
+  }
+}
